@@ -274,7 +274,8 @@ pub fn build(b: *std.Build) void {
         // cached payload. In linked-source/dev mode there is no bundled copy to
         // fall back on -- get_bun() resolves from the linked tree -- so place
         // bun INTO that tree instead, exactly like the LLVM shim's `place`
-        // step. Every jac binary gets bun, not just releases.
+        // step. Every jac binary gets bun, not just releases: jac's JS tooling
+        // runs exclusively on the bundled bun (no Node.js fallback).
         if (link_dir == null) {
             const bun_dir = b.pathFromRoot(b.fmt(".bun-build/{s}", .{osarch}));
             const bun_basename = if (target.result.os.tag == .windows) "bun.exe" else "bun";
