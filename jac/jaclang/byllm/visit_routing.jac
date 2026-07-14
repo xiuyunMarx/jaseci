@@ -542,7 +542,7 @@ def route_visit(candidates: list, model: object) -> list {
 
     call_params = model?.call_params or {};
     if call_params.get("multistage") is True {
-        if call_params.get("verbose") is True{
+        if call_params.get("verbose") is True {
             print("\033[31m Visit by enabled multistage routing \033[0m");
         }
         return route_visit_multistage(candidates, model);
