@@ -66,6 +66,9 @@ def get_ir_gen_sched -> list[type[Transform[uni.Module, uni.Module]]] {
     try {
         import from jaclang.compiler.passes.main.cfg_build_pass { CFGBuildPass }
         import from jaclang.compiler.passes.main.mtir_gen_pass { MTIRGenPass }
+        import from jaclang.compiler.passes.main.byllm_dataflow_pass {
+            ByLLMDataflowPass
+        }
         import from jaclang.compiler.passes.main.sem_def_match_pass { SemDefMatchPass }
         import from jaclang.compiler.passes.main.capability_check_pass {
             CapabilityCheckPass
@@ -85,6 +88,7 @@ def get_ir_gen_sched -> list[type[Transform[uni.Module, uni.Module]]] {
             SemDefMatchPass,
             CFGBuildPass,
             MTIRGenPass,
+            ByLLMDataflowPass,
             CapabilityCheckPass,
             JsxIntrinsicGuardPass
         ];

@@ -1,4 +1,3 @@
-import from collections.abc { Callable }
 
 obj MTRuntime {
     has caller: Callable[(..., object)],
@@ -65,37 +64,67 @@ obj MethodInfo(FunctionInfo) {
     has parent_class: (ClassInfo | None) = None;
 }
 
-"""Provenance of a single argument at a `by llm` call site."""
+
+"""Where a value flowing into a `by llm` argument originally came from."""
+obj ArgOriginInfo {
+    enum OriginType: str {
+        UserInput = "user_input",        # runtime input (input(), CLI args, request payload)
+        WalkerField = "walker_field",    # `has` field on a walker
+        NodeField = "node_field",        # `has` field on a node (data read from the graph)
+        EdgeField = "edge_field",        # `has` field on an edge
+        ObjectField = "object_field",    # field on a plain obj/class instance
+        GlobalVar = "global_var",        # module-level global
+        FunctionParam = "function_param",# parameter of the enclosing function/ability
+        LocalVar = "local_var",          # locally computed value
+        GraphRef = "graph_ref",          # graph reference ([-->], `here`, `self`)
+        Literal = "literal",             # constant literal in source
+        LLMOutput = "llm_output",        # result of an upstream `by llm` call
+        CallResult = "call_result",      # return value of a non-LLM call
+        Unknown = "unknown"
+    }
+
+    has origin_type: OriginType = OriginType.Unknown,
+        # The variable/field the value originates from, when resolvable.
+        origin_var: (VarInfo | None) = None,
+        # Scope that defines the origin (enclosing function or archetype name).
+        origin_scope: (FunctionInfo | ClassInfo | str | None) = None,
+        # Source location of the defining statement, "module:line".
+        origin_location: (str | None) = None,
+        # For LLMOutput origins: the producing call and its mtir_map scope key.
+        producer_llm_call: (FunctionInfo | None) = None,
+        producer_llm_scope: (str | None) = None;
+}
+
+"""Dataflow into a single argument of one `by llm` call site."""
 obj ArgFlowInfo {
-    has param_info: ParamInfo,  # the one parameter this argument binds to (callee view)
-        # Caller-side variables feeding this arg, with their semstrs.
+    has param_info: ParamInfo,
+        # Resolved origins of the value, one per dataflow path reaching the arg.
+        origins: list[ArgOriginInfo] = [],
         source_vars: list[VarInfo] = [],
-        # Source code snippets that produce this arg (one per reaching definition).
-        source_snippet: list[str] = [],
-        # Upstream LLM calls whose output flows into this arg.
+        source_code_snippet: list[str] = [],
+        # Upstream LLM calls whose output feeds this argument.
         upstream_llm_calls: list[FunctionInfo] = [],
-        # mtir_map scope keys of the upstream calls; authoritative at runtime
-        # (embedded FunctionInfo copies can go stale across modules).
+        # mtir_map scope keys of the upstream calls.
         upstream_llm_scopes: list[str] = [];
 }
 
 """Dataflow context surrounding one `by llm` call site."""
 obj CallSiteFlowInfo {
     has call_location: str,  # location of this call site, "module:line"
-        # Enclosing function/ability containing this call site; its semstr
-        # gives the "why am I being called" context. Scope key str when the
-        # enclosing scope has no MTIR info of its own.
         caller_scope: (FunctionInfo | str | None) = None,
         arg_flows: list[ArgFlowInfo] = [],
-        # Variable the result is assigned to; a `sem` on it is direct
-        # output-meaning info.
         result_target: (VarInfo | None) = None,
-        # Source code snippets of downstream uses of the result.
         result_sinks: list[str] = [],
         # Downstream LLM calls that consume this call's output.
         downstream_llm_calls: list[FunctionInfo] = [],
         # mtir_map scope keys of the downstream calls (see upstream_llm_scopes).
-        downstream_llm_scopes: list[str] = [];
+        downstream_llm_scopes: list[str] = [],
+        # `visit ... by llm(...)` router form only.
+        intent: str = "",
+        select_targets: str = "",
+        # Position in the topologically-ordered LLM pipeline (0 = unknown).
+        stage: int = 0,
+        stage_total: int = 0;
 }
 
 def mk_list(inner: object) -> tuple {
