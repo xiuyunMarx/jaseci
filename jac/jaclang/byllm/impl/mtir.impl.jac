@@ -37,7 +37,7 @@ impl MTRuntime.factory(mtir: MTIR) -> MTRuntime {
     raw_tools = call_params.get("tools", []);
     tools = [];
     local_idx = 0;
-    for func in raw_tools {
+    for func in raw_tools {# type: ignore
         # Already tool-like (e.g., McpTool) — pass through unchanged.
         if func?.get_json_schema and func?.get_name and func?.is_finish_tool {
             tools.append(func);
@@ -49,7 +49,7 @@ impl MTRuntime.factory(mtir: MTIR) -> MTRuntime {
         } else {
             tools.append(Tool(func));  # type: ignore
         }
-        local_idx += 1;
+        local_idx += 1; ## type: ignore
     }
     # Construct the input information from the arguments.
     inputs_detail: list[str] = [];
@@ -119,7 +119,7 @@ impl MTRuntime.factory(mtir: MTIR) -> MTRuntime {
             inputs_detail.insert(
                 0,
                 f"self = {(
-                    caller.__self__,
+                    caller.__self__, 
                     ir_info.parent_class.semstr if ir_info.parent_class else ''
                 )}"
             );

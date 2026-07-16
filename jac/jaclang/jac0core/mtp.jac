@@ -54,13 +54,48 @@ obj FunctionInfo(Info) {
     has params: (list[ParamInfo] | None) = None,
         return_type: (str | ClassInfo | tuple | None) = None,
         tools: (list[MethodInfo] | None) = None,
-        by_call: bool = False;
+        by_call: bool = False,
+        # Per-call-site dataflow context, populated by the dataflow pass.
+        call_sites: (list[CallSiteFlowInfo] | None) = None;
 
     def postinit -> object;
 }
 
 obj MethodInfo(FunctionInfo) {
     has parent_class: (ClassInfo | None) = None;
+}
+
+"""Provenance of a single argument at a `by llm` call site."""
+obj ArgFlowInfo {
+    has param_info: ParamInfo,  # the one parameter this argument binds to (callee view)
+        # Caller-side variables feeding this arg, with their semstrs.
+        source_vars: list[VarInfo] = [],
+        # Source code snippets that produce this arg (one per reaching definition).
+        source_snippet: list[str] = [],
+        # Upstream LLM calls whose output flows into this arg.
+        upstream_llm_calls: list[FunctionInfo] = [],
+        # mtir_map scope keys of the upstream calls; authoritative at runtime
+        # (embedded FunctionInfo copies can go stale across modules).
+        upstream_llm_scopes: list[str] = [];
+}
+
+"""Dataflow context surrounding one `by llm` call site."""
+obj CallSiteFlowInfo {
+    has call_location: str,  # location of this call site, "module:line"
+        # Enclosing function/ability containing this call site; its semstr
+        # gives the "why am I being called" context. Scope key str when the
+        # enclosing scope has no MTIR info of its own.
+        caller_scope: (FunctionInfo | str | None) = None,
+        arg_flows: list[ArgFlowInfo] = [],
+        # Variable the result is assigned to; a `sem` on it is direct
+        # output-meaning info.
+        result_target: (VarInfo | None) = None,
+        # Source code snippets of downstream uses of the result.
+        result_sinks: list[str] = [],
+        # Downstream LLM calls that consume this call's output.
+        downstream_llm_calls: list[FunctionInfo] = [],
+        # mtir_map scope keys of the downstream calls (see upstream_llm_scopes).
+        downstream_llm_scopes: list[str] = [];
 }
 
 def mk_list(inner: object) -> tuple {
